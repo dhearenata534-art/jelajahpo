@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors')
 const app = express();
 const mysql = require('mysql2');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 const PORT = 2001;
 
 const db = mysql.createConnection({
@@ -97,6 +99,41 @@ app.delete('/wisata/:id_wisata', (req, res) => {
     });
 });
 // ============================================================= //
+
+// ============== POST pengguna =============== //
+app.post ('/pengguna', async (req, res) => {
+    const { nama, email, password, no_hp } = req.body;
+
+    if (!nama || !email || !password) {
+        return res.status(400).json({message: "nama, Email, dan Password wajib diisi duluu"});
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const sql = 'INSERT INTO pengguna (nama, email, password, no_hp) VALUES (?, ?, ?, ?)';
+        db.query(sql, [nama, email, hashedPassword, no_hp], (err, result) => {
+             if (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    return res.status(400).json({
+                        message: 'Email sudah terdaftar, gunakan email lain'
+                    });
+                }
+                return res.status(500).json({
+                    error: err.sqlMessage
+                });
+            }
+
+            res.json({
+                message: 'Akun berhasil dibuat!',
+                id_pengguna: result.insertId
+            });
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Gagal mengenkripsi password' });
+    }
+});
+// ======================================== //
+
 
 // ======================= GET Kategori ========================== //
 app.get('/kategori', (req, res) => {
