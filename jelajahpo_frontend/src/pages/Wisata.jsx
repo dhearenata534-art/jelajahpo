@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 
 export default function Wisata() {
@@ -21,6 +22,32 @@ export default function Wisata() {
         getWisata();
     }, []);
 
+    const handleEdit = (id) => {
+        navigate(`/wisata/edit/${id}`);
+    };
+
+    const navigate = useNavigate ();
+    const handleDelete = async (id) => {
+        if (window.confirm("Yakin ingin menghapus wisataa ini")) {
+            try {
+                const res = await fetch(`http://localhost:2001/wisata/${id}`, {
+                    method: "DELETE",
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                });  if (res.ok) {
+                    alert("Wisata berhasil dihapus");
+                    getWisata(); // ambil ulang data terrrbaru
+                } else {
+                    alert("Gagal menghaous wisata");
+                }
+            } catch (err) {
+                console.error("Error saat delete:", err);
+                alert("Terjadi kesalahan saat menghapus wisata");
+            }
+        };
+    };
+
     if (loading) {
         return <div className="container mt-4">Sedang Memuat data...</div>;
     }
@@ -41,6 +68,8 @@ export default function Wisata() {
                         <th>Nama Wisata</th>
                         <th>Deskripsi</th>
                         <th>Harga Tiket</th>
+                        <th>Aksi</th>
+
                     </tr>
                 </thead>
                 <tbody>
@@ -51,6 +80,20 @@ export default function Wisata() {
                                 <td>{item.nama_wisata}</td>
                                 <td>{item.deskripsi}</td>
                                 <td>Rp{item.harga_tiket}</td>
+                                <td>
+                                    <button
+                                        className="btn btn-warning btn-sm me-5"
+                                        onClick={() => handleEdit(item.id_wisata)}
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        className="btn btn-danger btn-sm"
+                                        onClick={() => handleDelete(item.id_wisata)}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
                             </tr>
                         ))
                     ) : (
