@@ -50,16 +50,30 @@ export default function EditWisata() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const [fileBaru, setFileBaru] = useState(null);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        const data = new FormData();
+
+        data.append("nama_wisata", formData.nama_wisata);
+        data.append("deskripsi", formData.deskripsi);
+        data.append("harga_tiket", formData.harga_tiket);
+        data.append("id_kategori", formData.id_kategori);
+
+        if (fileBaru) {
+            data.append("file", fileBaru); // hanya kirim kalau ada foto baru
+        }
+
+        const token = localStorage.getItem("token");
 
         await fetch(`http://localhost:2001/wisata/${id}`, {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${localStorage.getItem("token")}`
-            },
-            body: JSON.stringify(formData),
+                    Authorization: `Bearer ${token}`,
+                },
+                body: data,
         });
 
         const konfirmasi = window.confirm(
@@ -83,6 +97,35 @@ export default function EditWisata() {
             <h2>Edit Wisata</h2>
 
             <form onSubmit={handleSubmit} className="mt-3">
+                {/* Menampilkan foto lama */}
+                <div className="mb-3">
+                    <label className="form-label">Foto Saat Ini</label>
+                    <div>
+                        {formData.nama_file ? (
+                            <img 
+                                src={`http://localhost:2001/uploads/${formData.nama_file}`}
+                                alt="Foto lama"
+                                style={{
+                                    width: "120px",
+                                    borderRadius: "8px"
+                                }}
+                            />
+                        ) : (
+                            <p>Tidak ada foto</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="mb-3">
+                    <label className="form-label">Ganti Foto</label>
+                    <input 
+                        type="file"
+                        accept="image/*"
+                        className="form-control"
+                        onChange={(e) => setFileBaru(e.target.files[0])}
+                    />
+                </div>
+
                 <div className="mb-3">
                     <label className="form-label">Nama Wisata</label>
                     <input

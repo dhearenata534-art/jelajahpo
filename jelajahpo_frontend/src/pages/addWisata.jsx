@@ -10,6 +10,7 @@ export default function AddWisata() {
     });
 
     const [kategori, setKategori] = useState([]);
+    const [file, setFile] = useState(null);
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -26,10 +27,20 @@ export default function AddWisata() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            const data = new FormData();
+
+            data.append("nama_wisata", formData.nama_wisata);
+            data.append("deskripsi", formData.deskripsi);
+            data.append("harga_tiket", formData.harga_tiket);
+            data.append("id_kategori", formData.id_kategori);
+
+            if (file) {
+                data.append("file", file);
+            }            
+
             const res = await fetch("http://localhost:2001/wisata", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
+                body: data
             });
             if (res.ok) {
                 alert("Wisata berhasil ditambahkan! Alhamdulillahh...");
@@ -106,6 +117,16 @@ export default function AddWisata() {
                             </option>
                         ))}
                     </select>
+                </div>
+
+                <div className="mb-3">
+                    <label className="form-label">Foto Produk</label>
+                    <input 
+                        type="file"
+                        accept="image/*"
+                        className="form-control"
+                        onChange={(e) => setFile(e.target.files[0])}
+                    />
                 </div>
 
                 <button type="submit" className="btn btn-success">

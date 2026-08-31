@@ -5,6 +5,8 @@ const mysql = require('mysql2');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const multer = require('multer');
 const PORT = 2001;
 
 const authJWT = require('./middleware');
@@ -27,6 +29,17 @@ db.connect(err => {
     }
 });
 
+app.use ('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename:  (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + '-' + file.originalname);
+    },
+});
+const upload = multer({ storage: storage });
 
 app.get('/', (req, res) => {
     res.send('Haloo, Selamat datang dii JelajahPo API🔥')
@@ -57,8 +70,9 @@ app.get('/wisata/:id_wisata', (req, res) => {
 // ============================================================= //
 
 // ======================= POST Wisata ========================== //
-app.post('/wisata', (req, res) => {
+app.post('/wisata', upload.single ('file'), (req, res) => {
     const { nama_wisata, deskripsi, harga_tiket, id_kategori } = req.body;
+    const nama_file = req.file ?  req.file.filename : null;
 
     if (!nama_wisata || !harga_tiket) {
         return res.status(400).json({ message: 'Nama Wisata dan harga Tiket harus diisi dulu yaa!!' })
@@ -68,8 +82,8 @@ app.post('/wisata', (req, res) => {
         return res.status(400).json({ message: 'Deskripsi harus diisi dulu yaa!!' })
     }
 
-    const sql = 'INSERT INTO wisata (nama_wisata, deskripsi, harga_tiket, id_kategori, tgl_input) VALUES (?, ?, ?, ?, NOW())';
-    db.query(sql, [nama_wisata, deskripsi, harga_tiket, id_kategori], (err, result) => {
+    const sql = 'INSERT INTO wisata (nama_wisata, deskripsi, harga_tiket, id_kategori, nama_file, tgl_input) VALUES (?, ?, ?, ?, ?, NOW())';
+    db.query(sql, [nama_wisata, deskripsi, harga_tiket, id_kategori, nama_file], (err, result) => {
         if (err) return res.status(500).json({ error: err.sqlMessage });
         res.json ({
             message: 'Wisata sudah berhasil ditambahkan!',
@@ -80,24 +94,102 @@ app.post('/wisata', (req, res) => {
 // ============================================================= //
 
 // ======================= PUT Wisata ========================== //
-app.put('/wisata/:id_wisata', authJWT, (req, res) => {
+app.put('/wisata/:id_wisata', upload.single('file'), authJWT, (req, res) => {
     const { id_wisata } = req.params;
     const { nama_wisata, deskripsi, harga_tiket, id_kategori } = req.body;
+
+    // Jika ada file baru, ambil nama file baru
+    const nama_file_baru = req.file ? req.file.filename : null;
+
 
     if (!nama_wisata || !harga_tiket) {
         return res.status(400).json({ message: 'Nama Wisata dan Harga Tiket diisi dulu' });
     }
 
-    const sql = 'UPDATE wisata SET nama_wisata=?, deskripsi=?, harga_tiket=?, id_kategori=? WHERE id_wisata=?';
-    db.query(sql, [nama_wisata, deskripsi, harga_tiket, id_kategori, id_wisata], (err, result) => {
-        if (err) return res.status(500).json({ error: err.sqlMessage });
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                message: 'Wisata Tidak Ditemukan'
-            });
-        }
-        res.json({ message: 'Wisata berhasil di update!!' });
-    })
+    // Jika ada foto baru
+    if (nama_file_baru) {
+
+        const sql = `
+            UPDATE wisata
+            SET nama_wisata=?,
+                deskripsi=?,
+                harga_tiket=?,
+                id_kategori=?,
+                nama_file=?
+            WHERE id_wisata=?
+        `;
+
+        db.query(
+            sql,
+            [
+                nama_wisata,
+                deskripsi,
+                harga_tiket,
+                id_kategori,
+                nama_file_baru,
+                id_wisata
+            ],
+            (err, result) => {
+                if (err) {
+                    return res.status(500).json({
+                        error: err.sqlMessage
+                    });
+                }
+
+                if (result.affectedRows === 0) {
+                    return res.status(404).json({
+                        message: 'Wisata Tidak Ditemukan'
+                    });
+                }
+
+                res.json({
+                    message: 'Wisata berhasil di update!!',
+                    nama_file: nama_file_baru
+                });
+            }
+        );
+
+    } else {
+
+        // Jika tidak ada foto baru,
+        // nama_file lama tetap digunakan
+        const sql = `
+            UPDATE wisata
+            SET nama_wisata=?,
+                deskripsi=?,
+                harga_tiket=?,
+                id_kategori=?
+            WHERE id_wisata=?
+        `;
+
+        db.query(
+            sql,
+            [
+                nama_wisata,
+                deskripsi,
+                harga_tiket,
+                id_kategori,
+                id_wisata
+            ],
+            (err, result) => {
+                if (err) {
+                    return res.status(500).json({
+                        error: err.sqlMessage
+                    });
+                }
+
+                if (result.affectedRows === 0) {
+                    return res.status(404).json({
+                        message: 'Wisata Tidak Ditemukan'
+                    });
+                }
+
+                res.json({
+                    message: 'Wisata berhasil di update!!'
+                });
+            }
+        );
+    }
 })    
 // ============================================================= //
 
